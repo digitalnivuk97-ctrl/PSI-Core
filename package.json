@@ -10,21 +10,27 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "cli": "node cli/portable-core.mjs"
   },
   "dependencies": {
     "convex": "^1.25.0",
     "fflate": "^0.8.2",
+    "marked": "^18.0.14",
     "next": "^15.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sanitize-html": "^2.17.7",
+    "sharp": "^0.35.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.4.6",
     "typescript": "^5.8.3",

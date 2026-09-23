@@ -1,4 +1,5 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { applyMigrations } from './migrations';
 import { promisify } from 'node:util';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -6,7 +7,9 @@ import type { Credential, InternalState, PublicState, Session, User } from './ty
 
 const scrypt = promisify(scryptCallback);
 const stateDirectory = process.env.PORTABLE_CORE_DATA_DIR ?? '.portable-core';
-const statePath = path.resolve(process.cwd(), stateDirectory, 'site.json');
+export const stateDirectoryPath = path.resolve(process.cwd(), stateDirectory);
+export const mediaDirectoryPath = path.join(stateDirectoryPath, 'media');
+const statePath = path.join(stateDirectoryPath, 'site.json');
 
 const now = () => Date.now();
 export const id = () => crypto.randomUUID();
@@ -34,13 +37,21 @@ function initialState(): InternalState {
     credentials: [],
     sessions: [],
     posts: [],
+    postRevisions: [],
+    tags: [],
+    categories: [],
     threads: [],
     replies: [],
+    readStates: [],
+    reports: [],
+    reactions: [],
+    moderationActions: [],
     projects: [],
     inquiries: [],
     notifications: [],
     audit: [],
     mutations: [],
+    migrations: [{ publicId: id(), version: 1, appliedAt: timestamp }],
     media: [],
   };
 }
@@ -56,7 +67,28 @@ async function ensureState() {
 
 export async function readState(): Promise<InternalState> {
   await ensureState();
-  return JSON.parse(await readFile(statePath, 'utf8')) as InternalState;
+  const state = JSON.parse(await readFile(statePath, 'utf8')) as Partial<InternalState>;
+  state.postRevisions ??= [];
+  state.tags ??= [];
+  state.categories ??= [];
+  state.readStates ??= [];
+  state.reports ??= [];
+  state.reactions ??= [];
+  state.moderationActions ??= [];
+  state.migrations ??= [];
+  state.media = (state.media ?? []).map((asset) => ({
+    ...asset,
+    storagePath: asset.storagePath ?? '',
+    originalMediaType: asset.originalMediaType ?? asset.mediaType,
+    originalByteSize: asset.originalByteSize ?? asset.byteSize,
+    originalDigest: asset.originalDigest ?? asset.digest,
+  }));
+  const normalized = state as InternalState;
+  const categoryCount = normalized.categories.length;
+  const migrationsApplied = applyMigrations(normalized, id, now);
+  ensureForumDefaults(normalized);
+  if ((normalized.site.type === 'forum' && categoryCount === 0) || migrationsApplied.length > 0) await writeState(normalized);
+  return normalized;
 }
 
 export async function writeState(state: InternalState) {
@@ -115,22 +147,35 @@ export async function currentUser(state: InternalState, sessionToken: string | u
   return state.users.find((user) => user.publicId === session.userId && user.status === 'active') ?? null;
 }
 
+export function ensureForumDefaults(state: InternalState) {
+  if (state.site.type !== 'forum' || state.categories.length > 0) return;
+  const timestamp = Date.now();
+  state.categories.push({ publicId: id(), name: 'General', slug: 'general', description: 'General community conversations', sortOrder: 0, createdAt: timestamp, updatedAt: timestamp });
+}
+
 export function publicState(state: InternalState, user: User | null, realtime: PublicState['realtime'] = 'live'): PublicState {
   const visibleUsers = user ? state.users : state.users.map((candidate) => ({ ...candidate, emailNormalized: '' }));
   const canManageContent = Boolean(user && ['owner', 'administrator', 'editor', 'author'].includes(user.role));
+  const canModerate = Boolean(user && ['owner', 'administrator', 'moderator'].includes(user.role));
   const response: PublicState = {
     site: state.site,
     setupComplete: state.setupComplete,
     currentUser: user,
     users: visibleUsers,
     posts: canManageContent ? state.posts.filter((post) => !post.deletedAt) : state.posts.filter((post) => post.status === 'published' && !post.deletedAt),
+    tags: state.tags,
+    categories: [...(state.categories ?? [])].sort((left, right) => left.sortOrder - right.sortOrder),
     threads: state.threads,
     replies: state.replies.filter((reply) => !reply.deletedAt && reply.moderationState === 'visible'),
+    readStates: user ? (state.readStates ?? []).filter((readState) => readState.userId === user.publicId) : [],
+    reports: canModerate ? state.reports ?? [] : [],
+    reactions: state.reactions ?? [],
+    moderationActions: canModerate ? state.moderationActions ?? [] : [],
     projects: canManageContent ? state.projects : state.projects.filter((project) => project.status === 'published'),
     inquiries: user && ['owner', 'administrator', 'editor', 'moderator'].includes(user.role) ? state.inquiries : [],
     notifications: user ? state.notifications.filter((notification) => notification.userId === user.publicId) : [],
     audit: user && ['owner', 'administrator'].includes(user.role) ? state.audit : [],
-    media: user ? state.media.filter((asset) => asset.status === 'ready') : [],
+    media: state.media.filter((asset) => asset.status === 'ready').map((asset) => ({ publicId: asset.publicId, digest: asset.digest, mediaType: asset.mediaType, byteSize: asset.byteSize, url: `/api/media/${asset.publicId}`, width: asset.width, height: asset.height, status: asset.status, createdBy: asset.createdBy, createdAt: asset.createdAt, updatedAt: asset.updatedAt })),
     realtime,
   };
   if (!state.setupComplete) response.setupToken = state.setupToken;

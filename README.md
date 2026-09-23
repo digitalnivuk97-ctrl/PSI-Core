@@ -30,6 +30,7 @@ To test realtime, open the public site in two browser windows. Publishing conten
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:e2e
 pnpm build
 pnpm cli help
 pnpm cli start ./my-site --init --template blog
@@ -39,9 +40,25 @@ pnpm cli pack create ./my-site ./my-site.pcpack
 
 The CLI's `start` command runs the local Next.js gateway from this checkout and stores instance data beneath the requested instance directory. The reference Compose file is in `deployment/compose/compose.yaml`; its Convex image digests must be pinned by an operator before production use.
 
+To reset a local demo, stop the server and remove `.portable-core`; the next start creates a fresh setup token. CLI-managed instances can be reset with `pnpm cli destroy ./my-site --confirm`.
+
+## Stage 2
+
+Stage 2 adds the blog domain and media pipeline. See `docs/STAGE_2.md` for the implementation plan, local workflow, Convex configuration, media policy, and release checks.
+
+## Stage 3
+
+Stage 3 adds forum categories, read state, reports, moderation, reactions, showcase project media, and inquiry workflows. See `docs/STAGE_3.md` for the implementation and test workflow.
+
+## Stages 4–5
+
+Stages 4–5 add migrations, staged restore, pre-upgrade backups, upgrade safeguards, security headers, rate limits, metrics, and release documentation. See `docs/STAGE_4_5.md` and `SECURITY.md`.
+
+Convex setup is documented in `docs/CONVEX.md`; the two-browser realtime test is documented in `docs/E2E.md`. Current implementation and remaining release gates are tracked in `docs/RELEASE_STATUS.md`.
+
 ## Local limitations
 
-The current testable path uses a filesystem-backed local adapter so the MVP can be exercised without provisioning Convex first. It deliberately keeps the same public IDs, role checks, mutation idempotency, revision checks, and pack boundaries that the Convex adapter will use. The raw Convex deployment still needs a production authentication integration, image digest lock, asset byte transport, and browser-level conformance tests before release.
+The current testable path uses a filesystem-backed local adapter so the full workflow can be exercised without provisioning Convex first. It keeps the same public IDs, role checks, mutation idempotency, revision checks, media validation, and pack boundaries that the Convex adapter uses. Local two-browser E2E passes; production still needs Convex identity provisioning, storage-byte integration, and Convex WebSocket conformance tests.
 
 ## Pack safety
 

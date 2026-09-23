@@ -42,6 +42,17 @@ pnpm cli start ./my-new-site --init --template forum --port 3001
 
 Each instance has its own data under `./my-new-site/.portable-core`. Never commit `.portable-core`, `.env*`, or `.pcpack` files.
 
+## Reset a demo
+
+Stop the development server, remove `.portable-core`, and start again. The next request creates a new setup token and an empty site.
+
+```bash
+rm -rf .portable-core
+pnpm dev
+```
+
+For a CLI-managed instance, use `pnpm cli stop ./my-site` followed by `pnpm cli destroy ./my-site --confirm`. Runtime data, media, databases, logs, CLI manifests, and `.pcpack` files are ignored by Git.
+
 ## Back up and restore
 
 ```bash
@@ -50,6 +61,25 @@ pnpm cli restore ./restored-site ./my-site.pcpack
 ```
 
 Public packs contain site content and public identity records, but exclude credentials, sessions, signing keys, and environment secrets. Operator pack primitives are available in `lib/pack.ts` and use an encrypted AES-256-GCM container.
+
+## Stage 2 blog workflow
+
+Create and edit posts in `/admin`. Each saved post creates a revision, accepts comma-separated tags, and can use a featured image from the Media library. Drafts are visible only to content roles; public pages only render published posts.
+
+```text
+/admin → Posts → Create post
+/admin → Settings → Media library
+/posts
+/posts/<slug>
+/rss.xml
+/sitemap.xml
+```
+
+Still images are normalized to WebP, animated GIFs are preserved, metadata is stripped, and uploads are limited to 10 MiB with magic-byte and dimension validation. See `docs/STAGE_2.md` for the complete Stage 2 workflow.
+
+## Stage 3 forum and showcase workflow
+
+Forum sites include a default General category, thread/reply relationships, read state, reports, moderation actions, reactions, and locking. Showcase sites include project media, project detail views, inquiries, and inquiry notifications. See `docs/STAGE_3.md`.
 
 ## Realtime testing
 

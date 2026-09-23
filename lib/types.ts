@@ -64,6 +64,75 @@ export interface Post {
   deletedAt: number | null;
 }
 
+export interface PostRevision {
+  publicId: string;
+  postId: string;
+  revision: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  bodyMarkdown: string;
+  editorId: string;
+  createdAt: number;
+}
+
+export interface Tag {
+  publicId: string;
+  name: string;
+  slug: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ForumCategory {
+  publicId: string;
+  name: string;
+  slug: string;
+  description: string;
+  sortOrder: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ReadState {
+  publicId: string;
+  userId: string;
+  threadId: string;
+  lastReadAt: number;
+  updatedAt: number;
+}
+
+export interface Report {
+  publicId: string;
+  reporterId: string;
+  targetType: 'thread' | 'forumPost';
+  targetId: string;
+  reason: string;
+  status: 'open' | 'reviewing' | 'resolved' | 'dismissed';
+  createdAt: number;
+  updatedAt: number;
+  resolvedBy: string | null;
+}
+
+export interface ModerationAction {
+  publicId: string;
+  moderatorId: string;
+  action: 'remove' | 'restore' | 'lock' | 'unlock' | 'dismiss_report' | 'resolve_report';
+  targetType: 'thread' | 'forumPost' | 'report';
+  targetId: string;
+  reason: string;
+  createdAt: number;
+}
+
+export interface Reaction {
+  publicId: string;
+  userId: string;
+  targetType: 'thread' | 'forumPost';
+  targetId: string;
+  kind: string;
+  createdAt: number;
+}
+
 export interface Thread {
   publicId: string;
   categoryId: string;
@@ -143,6 +212,12 @@ export interface AuditEvent {
   createdAt: number;
 }
 
+export interface MigrationRecord {
+  publicId: string;
+  version: number;
+  appliedAt: number;
+}
+
 export interface MutationRecord {
   key: string;
   actorId: string;
@@ -159,13 +234,21 @@ export interface InternalState {
   credentials: Credential[];
   sessions: Session[];
   posts: Post[];
+  postRevisions: PostRevision[];
+  tags: Tag[];
+  categories: ForumCategory[];
   threads: Thread[];
   replies: ForumReply[];
+  readStates: ReadState[];
+  reports: Report[];
+  reactions: Reaction[];
+  moderationActions: ModerationAction[];
   projects: Project[];
   inquiries: Inquiry[];
   notifications: Notification[];
   audit: AuditEvent[];
   mutations: MutationRecord[];
+  migrations: MigrationRecord[];
   media: MediaAsset[];
 }
 
@@ -177,6 +260,24 @@ export interface MediaAsset {
   width: number | null;
   height: number | null;
   storageId: string | null;
+  storagePath: string;
+  originalMediaType: string;
+  originalByteSize: number;
+  originalDigest: string;
+  status: 'ready' | 'pending' | 'deleted';
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface PublicMediaAsset {
+  publicId: string;
+  digest: string;
+  mediaType: string;
+  byteSize: number;
+  url: string;
+  width: number | null;
+  height: number | null;
   status: 'ready' | 'pending' | 'deleted';
   createdBy: string;
   createdAt: number;
@@ -189,13 +290,19 @@ export interface PublicState {
   currentUser: User | null;
   users: User[];
   posts: Post[];
+  tags: Tag[];
+  categories: ForumCategory[];
   threads: Thread[];
   replies: ForumReply[];
+  readStates: ReadState[];
+  reports: Report[];
+  reactions: Reaction[];
+  moderationActions: ModerationAction[];
   projects: Project[];
   inquiries: Inquiry[];
   notifications: Notification[];
   audit: AuditEvent[];
-  media: MediaAsset[];
+  media: PublicMediaAsset[];
   realtime: 'live' | 'reconnecting' | 'offline' | 'error';
   setupToken?: string;
 }
@@ -209,11 +316,20 @@ export type ActionName =
   | 'posts.unpublish'
   | 'posts.schedule'
   | 'posts.delete'
+  | 'categories.create'
+  | 'categories.update'
   | 'threads.create'
   | 'threads.lock'
   | 'threads.unlock'
   | 'forumPosts.create'
+  | 'forumPosts.edit'
   | 'forumPosts.delete'
+  | 'forumPosts.markRead'
+  | 'reports.create'
+  | 'reports.update'
+  | 'moderation.remove'
+  | 'moderation.restore'
+  | 'reactions.toggle'
   | 'projects.save'
   | 'projects.publish'
   | 'inquiries.create'
