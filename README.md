@@ -1,0 +1,57 @@
+# PSI Core
+
+PSI Core (Performance Site Interface) is a self-hosted, realtime-first CMS prototype for blogs, forums, and showcases. This repository contains a runnable local MVP slice designed to exercise the release-critical loop:
+
+- first-run setup with a generated owner account;
+- authenticated administration;
+- blog, forum, and showcase templates;
+- live updates across connected browsers;
+- revisions and client mutation IDs;
+- public and encrypted operator pack primitives;
+- Convex schema and reactive query boundaries;
+- health endpoints and a Docker Compose reference deployment.
+
+## Run locally
+
+Requirements: Node.js 20+, pnpm 10+, and optionally Docker for the deployment stack.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open `http://127.0.0.1:3000/setup`. The local development runtime creates a setup token in `.portable-core/site.json`; the setup screen displays it so the prototype can be tested without an external CLI. Choose a template and create the owner account.
+
+To test realtime, open the public site in two browser windows. Publishing content or posting a reply updates both windows without a reload. The local adapter uses short-lived reactive refreshes and `BroadcastChannel`; the Convex boundary in `convex/` is ready for a self-hosted deployment when `NEXT_PUBLIC_CONVEX_URL` is configured.
+
+## Commands
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm cli help
+pnpm cli start ./my-site --init --template blog
+pnpm cli status ./my-site
+pnpm cli pack create ./my-site ./my-site.pcpack
+```
+
+The CLI's `start` command runs the local Next.js gateway from this checkout and stores instance data beneath the requested instance directory. The reference Compose file is in `deployment/compose/compose.yaml`; its Convex image digests must be pinned by an operator before production use.
+
+## Local limitations
+
+The current testable path uses a filesystem-backed local adapter so the MVP can be exercised without provisioning Convex first. It deliberately keeps the same public IDs, role checks, mutation idempotency, revision checks, and pack boundaries that the Convex adapter will use. The raw Convex deployment still needs a production authentication integration, image digest lock, asset byte transport, and browser-level conformance tests before release.
+
+## Pack safety
+
+Public packs are ZIP containers named `.pcpack` with a versioned manifest, SHA-256 checksums, JSONL records, and an allowlisted record layout. Credentials, sessions, mutations, and secrets are excluded. Operator packs are AES-256-GCM encrypted as a whole with a scrypt-derived key; live sessions remain excluded.
+
+## Structure
+
+- `app/`: Next.js public, setup, admin, health, and pack API routes.
+- `components/`: browser portal, admin workspace, setup, and realtime hooks.
+- `lib/`: backend validation, persistence, authentication, and pack codec.
+- `convex/`: provider schema and typed reactive query/mutation examples.
+- `cli/`: one-command local lifecycle and pack operations.
+- `deployment/`: Docker Compose reference deployment.
