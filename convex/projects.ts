@@ -40,7 +40,7 @@ export const publicProjectBySlug = query({
 });
 
 export const saveProject = mutation({
-  args: { publicId: v.optional(v.string()), title: v.string(), slug: v.string(), summary: v.string(), bodyMarkdown: v.string(), sortOrder: v.optional(v.number()), assetIds: v.optional(v.array(v.string())), tagIds: v.optional(v.array(v.string())), customFields: v.optional(v.any()), expectedRevision: v.number(), clientMutationId: v.string() },
+  args: { publicId: v.optional(v.string()), projectType: v.optional(v.string()), title: v.string(), slug: v.string(), summary: v.string(), bodyMarkdown: v.string(), sortOrder: v.optional(v.number()), assetIds: v.optional(v.array(v.string())), tagIds: v.optional(v.array(v.string())), customFields: v.optional(v.any()), expectedRevision: v.number(), clientMutationId: v.string() },
   handler: async (ctx, args) => {
     const user = await requireEditor(ctx);
     const key = await ctx.db.query('idempotencyKeys').withIndex('byKey', (index) => index.eq('actorId', user.publicId)).filter((filter) => filter.eq(filter.field('clientMutationId'), args.clientMutationId)).unique();
@@ -51,7 +51,7 @@ export const saveProject = mutation({
     if (duplicate && duplicate.publicId !== args.publicId) throw new Error('That slug is already in use');
     const now = Date.now();
     const publicId = args.publicId ?? crypto.randomUUID();
-    const document = { publicId, title: args.title, slug: args.slug, summary: args.summary, bodyMarkdown: args.bodyMarkdown, status: existing?.status ?? 'draft', authorId: existing?.authorId ?? user.publicId, assetIds: args.assetIds ?? existing?.assetIds ?? [], tagIds: args.tagIds ?? existing?.tagIds ?? [], customFields: args.customFields ?? existing?.customFields ?? {}, sortOrder: args.sortOrder ?? existing?.sortOrder ?? 0, publishedAt: existing?.publishedAt, revision: (existing?.revision ?? 0) + 1, createdAt: existing?.createdAt ?? now, updatedAt: now };
+     const document = { publicId, projectType: args.projectType ?? existing?.projectType ?? 'case-study', title: args.title, slug: args.slug, summary: args.summary, bodyMarkdown: args.bodyMarkdown, status: existing?.status ?? 'draft', authorId: existing?.authorId ?? user.publicId, assetIds: args.assetIds ?? existing?.assetIds ?? [], tagIds: args.tagIds ?? existing?.tagIds ?? [], customFields: args.customFields ?? existing?.customFields ?? {}, sortOrder: args.sortOrder ?? existing?.sortOrder ?? 0, publishedAt: existing?.publishedAt, revision: (existing?.revision ?? 0) + 1, createdAt: existing?.createdAt ?? now, updatedAt: now };
     const id = existing ? existing._id : await ctx.db.insert('projects', document);
     if (existing) await ctx.db.patch(existing._id, document);
     const result = { publicId, revision: document.revision, id };

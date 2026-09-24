@@ -9,4 +9,10 @@ describe('content migrations', () => {
     expect(applyMigrations(state, () => 'migration-2', () => 11)).toHaveLength(0);
     expect(migrationStatus(state.migrations).ready).toBe(true);
   });
+
+  it('backfills the default Showcase project type', () => {
+    const state: { migrations?: { publicId: string; version: number; appliedAt: number }[]; projects: { projectType?: string }[] } = { migrations: [{ publicId: 'migration-1', version: 1, appliedAt: 1 }], projects: [{}] };
+    applyMigrations(state, () => 'migration-2', () => 2);
+    expect(state.projects[0].projectType).toBe('case-study');
+  });
 });

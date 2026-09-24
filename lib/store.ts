@@ -75,6 +75,8 @@ export async function readState(): Promise<InternalState> {
   state.reports ??= [];
   state.reactions ??= [];
   state.moderationActions ??= [];
+  state.projects ??= [];
+  state.projects = state.projects.map((project) => ({ ...project, projectType: project.projectType ?? 'case-study' }));
   state.migrations ??= [];
   state.media = (state.media ?? []).map((asset) => ({
     ...asset,

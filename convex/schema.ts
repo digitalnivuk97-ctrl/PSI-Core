@@ -131,6 +131,7 @@ export default defineSchema({
   }).index('byPublicId', ['publicId']),
   projects: defineTable({
     publicId: v.string(),
+    projectType: v.optional(v.string()),
     title: v.string(),
     slug: v.string(),
     summary: v.string(),

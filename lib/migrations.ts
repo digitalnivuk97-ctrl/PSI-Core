@@ -1,4 +1,4 @@
-export const currentContentSchemaVersion = 1;
+export const currentContentSchemaVersion = 2;
 export const currentCoreVersion = '0.1.0';
 
 export interface MigrationRecord {
@@ -10,7 +10,9 @@ export interface MigrationRecord {
 export function applyMigrations<T extends { migrations?: MigrationRecord[] }>(state: T, createId: () => string, now: () => number) {
   state.migrations ??= [];
   const applied: MigrationRecord[] = [];
+  const projectState = state as T & { projects?: { projectType?: string }[] };
   if (!state.migrations.some((record) => record.version === currentContentSchemaVersion)) {
+    for (const project of projectState.projects ?? []) project.projectType ??= 'case-study';
     const record = { publicId: createId(), version: currentContentSchemaVersion, appliedAt: now() };
     state.migrations.push(record);
     applied.push(record);

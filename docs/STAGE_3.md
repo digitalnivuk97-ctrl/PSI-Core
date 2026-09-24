@@ -25,6 +25,8 @@ A default `General` category is created automatically for new forum installation
 Included:
 
 - Published project cards with project detail modal.
+- Project types for case studies, products, services, and galleries.
+- Editable site identity and public URL in Showcase settings.
 - Project images from the shared media library.
 - Tags and custom-field validation at the backend boundary.
 - Ordering and revision checks.
@@ -50,8 +52,9 @@ Create a showcase site from `/setup`, then:
 
 ```text
 Admin → Showcase → create project
+Admin → Settings → edit site title and public URL
 Admin → Settings → Media library → upload images
-Public site → open project → send inquiry
+Public site → filter by project type → open project → send inquiry
 Admin → Inquiries → update status
 ```
 

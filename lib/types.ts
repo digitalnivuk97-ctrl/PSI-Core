@@ -1,4 +1,5 @@
 export type SiteType = 'blog' | 'forum' | 'showcase';
+export type ProjectType = 'case-study' | 'product' | 'service' | 'gallery';
 export type Role = 'owner' | 'administrator' | 'editor' | 'moderator' | 'author' | 'member';
 export type ContentStatus = 'draft' | 'published' | 'archived';
 
@@ -163,6 +164,7 @@ export interface ForumReply {
 
 export interface Project {
   publicId: string;
+  projectType?: ProjectType;
   title: string;
   slug: string;
   summary: string;

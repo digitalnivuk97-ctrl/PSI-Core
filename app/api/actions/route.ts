@@ -6,7 +6,7 @@ import { initializeConvexSite, syncConvexState } from '@/lib/convex';
 import { isCookieSecure } from '@/lib/runtime';
 import { enforceRateLimit, rateLimitHeaders, requestFingerprint } from '@/lib/rate-limit';
 import { normalizeTags, snapshotPost } from '@/lib/blog';
-import type { ActionName, ForumCategory, InternalState, Inquiry, ModerationAction, Post, Project, Reaction, ReadState, Report, Thread, User } from '@/lib/types';
+import type { ActionName, ForumCategory, InternalState, Inquiry, ModerationAction, Post, Project, ProjectType, Reaction, ReadState, Report, Thread, User } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -340,6 +340,8 @@ export async function POST(request: Request) {
       project.slug = slug;
       project.summary = stringValue(payload, 'summary').slice(0, 500);
       project.bodyMarkdown = stringValue(payload, 'bodyMarkdown');
+      const projectType = payload.projectType;
+      project.projectType = typeof projectType === 'string' && ['case-study', 'product', 'service', 'gallery'].includes(projectType) ? projectType as ProjectType : project.projectType ?? 'case-study';
       project.status = payload.status === 'published' ? 'published' : 'draft';
       const assetIds = Array.isArray(payload.assetIds) ? payload.assetIds.filter((assetId): assetId is string => typeof assetId === 'string') : [];
       if (assetIds.some((assetId) => !state.media.some((asset) => asset.publicId === assetId && asset.status === 'ready'))) throw new Error('One or more project assets were not found');
