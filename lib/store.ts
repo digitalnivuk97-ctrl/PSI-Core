@@ -32,7 +32,7 @@ function initialState(): InternalState {
       updatedAt: timestamp,
     },
     setupComplete: false,
-    setupToken: `${token(3).slice(0, 4).toUpperCase()}-${token(3).slice(0, 4).toUpperCase()}`,
+    setupToken: process.env.PORTABLE_CORE_SETUP_TOKEN?.trim() || `${token(3).slice(0, 4).toUpperCase()}-${token(3).slice(0, 4).toUpperCase()}`,
     users: [],
     credentials: [],
     sessions: [],
@@ -153,7 +153,7 @@ export function ensureForumDefaults(state: InternalState) {
   state.categories.push({ publicId: id(), name: 'General', slug: 'general', description: 'General community conversations', sortOrder: 0, createdAt: timestamp, updatedAt: timestamp });
 }
 
-export function publicState(state: InternalState, user: User | null, realtime: PublicState['realtime'] = 'live'): PublicState {
+export function publicState(state: InternalState, user: User | null, realtime: PublicState['realtime'] = 'live', includeSetupToken = false): PublicState {
   const visibleUsers = user ? state.users : state.users.map((candidate) => ({ ...candidate, emailNormalized: '' }));
   const canManageContent = Boolean(user && ['owner', 'administrator', 'editor', 'author'].includes(user.role));
   const canModerate = Boolean(user && ['owner', 'administrator', 'moderator'].includes(user.role));
@@ -178,7 +178,7 @@ export function publicState(state: InternalState, user: User | null, realtime: P
     media: state.media.filter((asset) => asset.status === 'ready').map((asset) => ({ publicId: asset.publicId, digest: asset.digest, mediaType: asset.mediaType, byteSize: asset.byteSize, url: `/api/media/${asset.publicId}`, width: asset.width, height: asset.height, status: asset.status, createdBy: asset.createdBy, createdAt: asset.createdAt, updatedAt: asset.updatedAt })),
     realtime,
   };
-  if (!state.setupComplete) response.setupToken = state.setupToken;
+  if (!state.setupComplete && includeSetupToken) response.setupToken = state.setupToken;
   return response;
 }
 

@@ -22,4 +22,12 @@ describe('public state media', () => {
     expect(result.readStates).toHaveLength(0);
     expect(result.reports).toHaveLength(0);
   });
+
+  it('does not expose the setup token to remote public state', () => {
+    const source = state();
+    source.setupComplete = false;
+    source.setupToken = 'LOCAL-SETUP';
+    expect(publicState(source, null).setupToken).toBeUndefined();
+    expect(publicState(source, null, 'live', true).setupToken).toBe('LOCAL-SETUP');
+  });
 });

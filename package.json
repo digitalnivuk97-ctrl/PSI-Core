@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "release:check": "node scripts/verify-release.mjs",
+    "convex:codegen": "convex codegen",
     "cli": "node cli/portable-core.mjs"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@next/eslint-plugin-next": "^15.5.26",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.8",
@@ -33,6 +36,7 @@
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.4.6",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },

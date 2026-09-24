@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { currentUser, publicState, createCredential, contentSlug, ensureForumDefaults, hasMutation, hasRole, hashToken, id, isValidPassword, newSession, normalizeEmail, readState, recordAudit, rememberMutation, verifyPassword, writeState } from '@/lib/store';
 import { incrementCounter } from '@/lib/metrics';
+import { initializeConvexSite, syncConvexState } from '@/lib/convex';
+import { isCookieSecure } from '@/lib/runtime';
 import { enforceRateLimit, rateLimitHeaders, requestFingerprint } from '@/lib/rate-limit';
 import { normalizeTags, snapshotPost } from '@/lib/blog';
 import type { ActionName, ForumCategory, InternalState, Inquiry, ModerationAction, Post, Project, Reaction, ReadState, Report, Thread, User } from '@/lib/types';
@@ -33,6 +35,11 @@ function requireCurrentUser(state: InternalState, user: User | null) {
   return user;
 }
 
+async function persistState(state: InternalState) {
+  await syncConvexState(state);
+  await writeState(state);
+}
+
 export async function POST(request: Request) {
   try {
     const origin = request.headers.get('origin');
@@ -53,12 +60,17 @@ export async function POST(request: Request) {
     const state = await readState();
     const actor = await currentUser(state, sessionToken);
     const existing = hasMutation(state, actor?.publicId ?? 'anonymous', body.clientMutationId);
-    if (existing) return NextResponse.json({ result: existing.result, state: publicState(state, actor) });
+    if (existing) {
+      await syncConvexState(state);
+      return NextResponse.json({ result: existing.result, state: publicState(state, actor) });
+    }
 
     let result: unknown = { ok: true };
     if (body.action === 'setup.complete') {
       if (state.setupComplete) throw new Error('Setup is already complete');
-      if (payload.setupToken !== state.setupToken) throw new Error('The setup token is invalid or expired');
+      const expectedSetupToken = process.env.PORTABLE_CORE_SETUP_TOKEN?.trim() || state.setupToken;
+      if (payload.setupToken !== expectedSetupToken) throw new Error('The setup token is invalid or expired');
+      if (payload.convexMode === 'external' && (!process.env.NEXT_PUBLIC_CONVEX_URL || !process.env.CONVEX_SELF_HOSTED_URL)) throw new Error('External Convex mode requires both Convex URLs before setup');
       const password = stringValue(payload, 'password');
       if (!isValidPassword(password)) throw new Error('Use at least 10 characters with a letter and a number');
       const email = normalizeEmail(stringValue(payload, 'email'));
@@ -71,6 +83,7 @@ export async function POST(request: Request) {
       if (typeof payload.siteType === 'string' && ['blog', 'forum', 'showcase'].includes(payload.siteType)) state.site.type = payload.siteType as typeof state.site.type;
       if (typeof payload.publicUrl === 'string' && payload.publicUrl.trim()) state.site.publicUrl = payload.publicUrl.trim();
       ensureForumDefaults(state);
+      if (process.env.CONVEX_SELF_HOSTED_URL) await initializeConvexSite(state.site, process.env.PORTABLE_CORE_SETUP_TOKEN?.trim() || state.setupToken);
       state.setupComplete = true;
       state.setupToken = '';
       recordAudit(state, user.publicId, 'setup.complete', 'site', state.site.publicId, { siteType: state.site.type });
@@ -78,7 +91,7 @@ export async function POST(request: Request) {
       state.sessions.push(created.session);
       result = { ok: true, user };
       rememberMutation(state, user.publicId, body.clientMutationId, result);
-      await writeState(state);
+      await persistState(state);
       return withSession(NextResponse.json({ result, state: publicState(state, user) }), created.token);
     }
 
@@ -93,7 +106,7 @@ export async function POST(request: Request) {
       recordAudit(state, user.publicId, 'auth.signIn', 'user', user.publicId);
       result = { ok: true, user };
       rememberMutation(state, user.publicId, body.clientMutationId, result);
-      await writeState(state);
+      await persistState(state);
       return withSession(NextResponse.json({ result, state: publicState(state, user) }), created.token);
     }
 
@@ -102,9 +115,9 @@ export async function POST(request: Request) {
         const session = state.sessions.find((candidate) => candidate.tokenHash === hashToken(sessionToken));
         if (session) session.revokedAt = Date.now();
       }
-      await writeState(state);
+      await persistState(state);
       const response = NextResponse.json({ result: { ok: true }, state: publicState(state, null) });
-      response.cookies.set('pc_session', '', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0 });
+      response.cookies.set('pc_session', '', { httpOnly: true, sameSite: 'lax', secure: isCookieSecure(), path: '/', maxAge: 0 });
       return response;
     }
 
@@ -114,7 +127,7 @@ export async function POST(request: Request) {
       for (const recipient of state.users.filter((candidate) => ['owner', 'administrator', 'editor'].includes(candidate.role))) state.notifications.push({ publicId: id(), userId: recipient.publicId, kind: 'inquiry', targetType: 'inquiry', targetId: inquiry.publicId, body: `New inquiry from ${inquiry.name}`, readAt: null, createdAt: inquiry.createdAt });
       result = { ok: true, inquiry };
       rememberMutation(state, actor?.publicId ?? 'anonymous', body.clientMutationId, result);
-      await writeState(state);
+      await persistState(state);
       return NextResponse.json({ result, state: publicState(state, actor) });
     }
 
@@ -404,7 +417,7 @@ export async function POST(request: Request) {
     }
 
     rememberMutation(state, user.publicId, body.clientMutationId, result);
-    await writeState(state);
+    await persistState(state);
     return NextResponse.json({ result, state: publicState(state, user) });
   } catch (error) {
     incrementCounter('mutationFailures');
@@ -417,6 +430,6 @@ export async function POST(request: Request) {
 }
 
 function withSession(response: NextResponse, token: string) {
-  response.cookies.set('pc_session', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 14 });
+  response.cookies.set('pc_session', token, { httpOnly: true, sameSite: 'lax', secure: isCookieSecure(), path: '/', maxAge: 60 * 60 * 24 * 14 });
   return response;
 }

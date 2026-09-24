@@ -1,5 +1,7 @@
 # PSI Core contributor guide
 
+For a beginner-friendly Docker walkthrough, start with [`SETUP_GUIDE.md`](SETUP_GUIDE.md).
+
 ## Requirements
 
 - Node.js 20 or newer
@@ -22,7 +24,7 @@ pnpm build
 pnpm dev
 ```
 
-Open `http://127.0.0.1:3000/setup`. The first-run screen displays the one-time setup token generated in `.portable-core/site.json`. Create the owner account before opening `/admin`.
+Open `http://127.0.0.1:3000/setup`. The browser wizard handles the fresh-instance flow: choose a template, create the owner, review the details, and launch into `/admin`. When opened from `localhost` or `127.0.0.1`, it fills the generated one-time setup code automatically. For a remote first run, set `PORTABLE_CORE_SETUP_TOKEN` in the deployment environment and enter that code; the code is not exposed to remote public state responses.
 
 For a CLI-managed instance:
 
@@ -87,13 +89,20 @@ Open two browser windows at the public site. Publishing a post, creating a reply
 
 ## Docker deployment
 
-Copy the environment template and replace image references with pinned digests before production use:
+Copy the environment template, replace every placeholder, pin both Convex images by digest, and keep the deployment admin key outside the web service:
 
 ```bash
 cp deployment/compose/.env.example deployment/compose/.env
+pnpm release:check
 ```
 
-The reference stack is in `deployment/compose/compose.yaml`. The Convex dashboard is a local administration tool and must not be exposed publicly.
+The reference stack is in `deployment/compose/compose.yaml`. The Convex dashboard is a local administration tool and must not be exposed publicly. Set `NEXT_PUBLIC_CONVEX_URL` before building because the browser bundle embeds it. The `PORTABLE_CORE_REQUIRE_CONVEX=true` setting makes readiness fail closed until the Convex URLs are configured. For same-machine Convex, use the `self-hosted` profile; it deploys the Convex functions before Core starts:
+
+```bash
+docker compose --env-file deployment/compose/.env --profile self-hosted up -d --build
+```
+
+For an external Convex service, set `CONVEX_SELF_HOSTED_MODE=external` and omit the `self-hosted` profile.
 
 ## Project layout
 

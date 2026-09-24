@@ -40,7 +40,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     deletedAt: v.optional(v.number()),
-  }).index('byPublicId', ['publicId']).index('bySlug', ['slug']).index('byStatus', ['status']),
+  }).index('byPublicId', ['publicId']).index('bySlug', ['slug']).index('byStatus', ['status']).index('byAuthorId', ['authorId']),
   postRevisions: defineTable({
     publicId: v.string(),
     postId: v.string(),
@@ -145,7 +145,7 @@ export default defineSchema({
     revision: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('byPublicId', ['publicId']).index('bySlug', ['slug']).index('byStatus', ['status']),
+  }).index('byPublicId', ['publicId']).index('bySlug', ['slug']).index('byStatus', ['status']).index('byAuthorId', ['authorId']),
   inquiries: defineTable({
     publicId: v.string(),
     projectId: v.optional(v.string()),
@@ -175,7 +175,7 @@ export default defineSchema({
     requestId: v.string(),
     metadata: v.any(),
     createdAt: v.number(),
-  }).index('byPublicId', ['publicId']),
+  }).index('byPublicId', ['publicId']).index('byActorId', ['actorId']),
   idempotencyKeys: defineTable({
     publicId: v.string(),
     actorId: v.string(),
@@ -189,6 +189,15 @@ export default defineSchema({
     version: v.number(),
     appliedAt: v.number(),
   }).index('byVersion', ['version']),
+  mediaUploads: defineTable({
+    publicId: v.string(),
+    userId: v.string(),
+    mediaType: v.string(),
+    byteSize: v.number(),
+    status: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index('byPublicId', ['publicId']).index('byUser', ['userId']),
   assets: defineTable({
     publicId: v.string(),
     digest: v.string(),

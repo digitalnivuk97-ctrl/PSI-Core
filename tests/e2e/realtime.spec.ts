@@ -19,8 +19,19 @@ async function jsonRequest(context: BrowserContext, method: 'get' | 'post', path
 test('two isolated browsers converge on forum replies without draft leakage', async ({ browser }) => {
   const owner = await browser.newContext();
   const visitor = await browser.newContext();
-  const state = await jsonRequest(owner, 'get', '/api/state');
-  await jsonRequest(owner, 'post', '/api/actions', { action: 'setup.complete', clientMutationId: crypto.randomUUID(), payload: { setupToken: state.setupToken, siteName: 'E2E Forum', siteType: 'forum', displayName: 'Owner', email: 'owner-e2e@example.test', password: 'SecurePass123' } });
+  const setupPage = await owner.newPage();
+  await setupPage.goto('/setup');
+  await setupPage.getByLabel('Site name').fill('E2E Forum');
+  await setupPage.getByRole('button', { name: 'Forum Start conversations with threads and replies.', exact: true }).click();
+  await setupPage.getByRole('button', { name: 'Continue' }).click();
+  await setupPage.getByLabel('Your name').fill('Owner');
+  await setupPage.getByLabel('Email').fill('owner-e2e@example.test');
+  await setupPage.getByLabel('Password').fill('SecurePass123');
+  await setupPage.getByRole('button', { name: 'Review setup' }).click();
+  await expect(setupPage.getByLabel(/Setup code/)).toHaveValue(/[A-Z0-9-]+/);
+  await setupPage.getByRole('button', { name: 'Create site' }).click();
+  await setupPage.waitForURL('**/admin');
+  await setupPage.close();
   const categoryId = (await jsonRequest(owner, 'get', '/api/state')).categories[0].publicId;
   const draft = await jsonRequest(owner, 'post', '/api/actions', { action: 'posts.save', clientMutationId: crypto.randomUUID(), payload: { title: 'Private draft must not leak', slug: 'private-draft', excerpt: 'hidden', bodyMarkdown: 'hidden', status: 'draft', expectedRevision: 0 } });
   expect(draft.result.post.status).toBe('draft');

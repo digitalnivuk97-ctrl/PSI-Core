@@ -20,9 +20,9 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://127.0.0.1:3000/setup`. The local development runtime creates a setup token in `.portable-core/site.json`; the setup screen displays it so the prototype can be tested without an external CLI. Choose a template and create the owner account.
+Open `http://127.0.0.1:3000/setup`. The local setup wizard detects a fresh instance, pre-fills the one-time setup code when opened from loopback, and guides you through site template selection, owner creation, and launch without CLI commands. For a remote first run, set `PORTABLE_CORE_SETUP_TOKEN` in the deployment environment and enter that code in the wizard.
 
-To test realtime, open the public site in two browser windows. Publishing content or posting a reply updates both windows without a reload. The local adapter uses short-lived reactive refreshes and `BroadcastChannel`; the Convex boundary in `convex/` is ready for a self-hosted deployment when `NEXT_PUBLIC_CONVEX_URL` is configured.
+To test realtime, open the public site in two browser windows. Publishing content or posting a reply updates both windows without a reload. The local adapter uses short-lived reactive refreshes and `BroadcastChannel`; the Convex boundary in `convex/` is a deployment-ready public/authenticated function boundary when `NEXT_PUBLIC_CONVEX_URL` and the self-hosted backend are configured.
 
 ## Commands
 
@@ -32,13 +32,15 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
+pnpm convex:codegen
+pnpm release:check
 pnpm cli help
 pnpm cli start ./my-site --init --template blog
 pnpm cli status ./my-site
 pnpm cli pack create ./my-site ./my-site.pcpack
 ```
 
-The CLI's `start` command runs the local Next.js gateway from this checkout and stores instance data beneath the requested instance directory. The reference Compose file is in `deployment/compose/compose.yaml`; its Convex image digests must be pinned by an operator before production use.
+The CLI's `start` command runs the local Next.js gateway from this checkout and stores instance data beneath the requested instance directory. The reference Compose file is in `deployment/compose/compose.yaml`; `pnpm release:check` rejects missing configuration, floating image tags, placeholders, and accidental admin-key exposure before deployment. For same-machine Convex, use `docker compose --env-file deployment/compose/.env --profile self-hosted up -d --build`; the one-shot deployment service publishes the functions automatically.
 
 To reset a local demo, stop the server and remove `.portable-core`; the next start creates a fresh setup token. CLI-managed instances can be reset with `pnpm cli destroy ./my-site --confirm`.
 
@@ -54,11 +56,11 @@ Stage 3 adds forum categories, read state, reports, moderation, reactions, showc
 
 Stages 4–5 add migrations, staged restore, pre-upgrade backups, upgrade safeguards, security headers, rate limits, metrics, and release documentation. See `docs/STAGE_4_5.md` and `SECURITY.md`.
 
-Convex setup is documented in `docs/CONVEX.md`; the two-browser realtime test is documented in `docs/E2E.md`. Current implementation and remaining release gates are tracked in `docs/RELEASE_STATUS.md`.
+Convex setup is documented in `docs/CONVEX.md`; the beginner-friendly server walkthrough is `docs/SETUP_GUIDE.md`; the two-browser realtime test is documented in `docs/E2E.md`. Current implementation and remaining release gates are tracked in `docs/RELEASE_STATUS.md`.
 
 ## Local limitations
 
-The current testable path uses a filesystem-backed local adapter so the full workflow can be exercised without provisioning Convex first. It keeps the same public IDs, role checks, mutation idempotency, revision checks, media validation, and pack boundaries that the Convex adapter uses. Local two-browser E2E passes; production still needs Convex identity provisioning, storage-byte integration, and Convex WebSocket conformance tests.
+The current testable path uses a filesystem-backed local adapter so the full workflow can be exercised without provisioning Convex first. It keeps the same public IDs, role checks, mutation idempotency, revision checks, media validation, and pack boundaries that the Convex adapter uses. Local two-browser E2E passes. Production must provision a Convex identity provider that issues the `publicId` claim, deploy `convex.json`, configure the authenticated admin surface, verify Convex WebSockets and media storage, and run the release check against a real deployment.
 
 ## Pack safety
 

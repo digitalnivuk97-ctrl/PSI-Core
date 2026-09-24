@@ -1,15 +1,16 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import { identityPublicId } from './_lib/identity';
 
 const editorRoles = ['owner', 'administrator', 'editor', 'author'];
 type EditorUser = { publicId: string; role: string };
-type EditorContext = { auth: { getUserIdentity: () => Promise<{ subject: string } | null> }; db: { query: (table: 'users') => { withIndex: (name: string, range: (index: { eq: (field: string, value: string) => unknown }) => unknown) => { unique: () => Promise<EditorUser | null> } } } };
+type EditorContext = { auth: { getUserIdentity: () => Promise<unknown> }; db: { query: (table: 'users') => { withIndex: (name: string, range: (index: { eq: (field: string, value: string) => unknown }) => unknown) => { unique: () => Promise<EditorUser | null> } } } };
 
 async function requireEditor(ctx: unknown) {
   const context = ctx as EditorContext;
   const identity = await context.auth.getUserIdentity();
   if (!identity) throw new Error('Unauthorized');
-  const user = await context.db.query('users').withIndex('byPublicId', (index) => index.eq('publicId', identity.subject)).unique();
+  const user = await context.db.query('users').withIndex('byPublicId', (index) => index.eq('publicId', identityPublicId(identity))).unique();
   if (!user || !editorRoles.includes(user.role)) throw new Error('Forbidden');
   return user;
 }
